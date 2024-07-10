@@ -139,4 +139,4 @@ The following commands can be used to build and test the scraper:
 
 This project adheres to openZIM's [Contribution Guidelines](https://github.com/openzim/overview/wiki/Contributing).
 
-This project has implemented openZIM's [Python bootstrap, conventions and policies](https://github.com/openzim/_python-bootstrap/docs/Policy.md) **v1.0.2**.
+This project has implemented openZIM's [Python bootstrap, conventions and policies](https://github.com/openzim/_python-bootstrap/docs/Policy.md) **v1.0.3**.
