@@ -5,7 +5,7 @@ from devdocs2zim.__about__ import __version__
 
 def compute(a: int, b: int) -> int:
     if not isinstance(a, int) or not isinstance(b, int):
-        msg = "int only"
+        msg = "int ONLY"
         raise TypeError(msg)
     return a + b
 
