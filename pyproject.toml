@@ -8,7 +8,9 @@ requires-python = ">=3.12,<3.13"
 description = "Make ZIM files from DevDocs.io"
 readme = "README.md"
 dependencies = [
-    "requests==2.31.0",
+    "requests==2.32.3",
+    "pydantic==2.8.2",
+    "zimscraperlib==3.4.0",
 ]
 dynamic = ["authors", "classifiers", "keywords", "license", "version", "urls"]
 
