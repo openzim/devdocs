@@ -77,24 +77,61 @@ There are three main ways to install and use `devdocs2zim` from most recommended
 
 
 ```sh
-docker run -v my_dir:/output ghcr.io/openzim/devdocs devdocs2zim [--all|--slug=SLUG]
+# Usage
+docker run -v my_dir:/output ghcr.io/openzim/devdocs devdocs2zim [--all|--slug=SLUG|--first=N]
+
+# Fetch all documents
+docker run -v my_dir:/output ghcr.io/openzim/devdocs devdocs2zim --all
+
+# Fetch all documents except Ansible
+docker run -v my_dir:/output ghcr.io/openzim/devdocs devdocs2zim --all --skip-slug-regex "^ansible.*"
+
+# Fetch Vue related documents
+docker run -v my_dir:/output ghcr.io/openzim/devdocs devdocs2zim --slug vue~3 --slug vue_router~4
+
+# Fetch the docs for the two most recent versions of each software
+docker run -v my_dir:/output ghcr.io/openzim/devdocs devdocs2zim --first=2
 ```
 
-**Flags**
+
+**One of the following flags is required:**
 
 * `--all`: Fetch all Devdocs resources, and produce one ZIM per resource.
-* `--slug`: Fetch the provided Devdocs resource, producing a single ZIM.
-    Slugs are the first path entry in the Devdocs URL. For example, the slug for: `https://devdocs.io/gcc~12/` is `gcc~12`.
-* `--title`:  (Optional) Set the title for the ZIM, supports the placeholders listed below.
-* `--description`: (Optional) Set the description for the ZIM, supports the placeholders listed below.
-* `--devdocs-endpoint`: (Optional) Override the Devdocs URL endpoint.
-* `--filename`: (Optional) Set the output file name, supports the placeholders listed below.
+* `--slug SLUG`: Fetch the provided Devdocs resource. Slugs are the first path entry in the Devdocs URL.
+    For example, the slug for: `https://devdocs.io/gcc~12/` is `gcc~12`. Use --slug several times to add multiple.
+* `--first N`: Fetch the first number of items per slug as shown in the DevDocs UI.
 
-**Placeholders**
 
-* `{name}`: Human readable name of the Devdocs resource e.g. `Python 3.12`.
+**Optional Flags:**
+
+*  `--skip-slug-regex REGEX`: Skips slugs matching the given regular expression.
+*  `--output OUTPUT_FOLDER`: Output folder for ZIMs. Default: /output
+*  `--creator CREATOR`: Name of content creator. Default: 'DevDocs'
+*  `--publisher PUBLISHER`: Custom publisher name. Default: 'openZIM'
+*  `--name-format FORMAT`: Custom name format for individual ZIMs.
+    Default: 'devdocs_{slug_without_version}_{version}'
+*  `--title-format FORMAT`: Custom title format for individual ZIMs.
+    Value will be truncated to 30 chars. Default: '{full_name} Documentation'
+*  `--description-format FORMAT`: Custom description format for individual ZIMs.
+    Value will be truncated to 80 chars. Default: '{full_name} Documentation'
+*  `--long-description-format FORMAT`: Custom long description format for your ZIM.
+    Value will be truncated to 4000 chars.Default: '{full_name} documentation by DevDocs'
+*  `--tag TAG`: Add tag to the ZIM. Use --tag several times to add multiple.
+    Formatting is supported. Default: ['devdocs', '{slug_without_version}']
+
+**Formatting Placeholders**
+
+The following formatting placeholders are supported:
+
+* `{name}`: Human readable name of the resource e.g. `Python`.
+* `{full_name}`: Name with optional version for the resource e.g. `Python 3.12`.
 * `{slug}`: Devdocs slug for the resource e.g. `python~3.12`.
-* `{license}`: License information about the resource.
+* `{slug_without_version}`: Devdocs slug for the resource without the version e.g. `python`.
+* `{version}`: Shortened version displayed in devdocs, if any e.g. `3.12`.
+* `{release}`: Specific release of the software the documentation is for, if any e.g. `3.12.1`.
+* `{attribution}`: License and attribution information about the resource.
+* `{home_link}`: Link to the project's home page, if any: e.g. `https://python.org`.
+* `{code_link}`: Link to the project's source, if any: e.g. `https://github.com/python/cpython`.
 
 ## Developing
 

@@ -39,7 +39,7 @@ dev = [
 ]
 
 [project.scripts]
-devdocs2zim = "devdocs2zim:entrypoint"
+devdocs2zim = "devdocs2zim.entrypoint:main"
 
 [tool.hatch.metadata.hooks.openzim-metadata]
 kind = "scraper"
