@@ -11,6 +11,8 @@ from devdocs2zim.client import (
     DevdocsIndexType,
     DevdocsMetadata,
     DevdocsMetadataLinks,
+    NavigationSection,
+    SortPrecedence,
 )
 
 # NOTE: Deserializataion tests in this file are performed against the full object
@@ -224,6 +226,74 @@ class TestDevdocsIndexType(TestCase):
             index_type,
         )
 
+    def test_sort_precedence_default(self):
+        index_type = DevdocsIndexType(
+            name="ZIM Readers",
+            count=0,
+            slug="",
+        )
+
+        got = index_type.sort_precedence()
+
+        self.assertEqual(SortPrecedence.CONTENT, got)
+
+    def test_sort_precedence_before(self):
+        index_type = DevdocsIndexType(
+            name="(Tutorial) Creating a ZIM",
+            count=0,
+            slug="",
+        )
+
+        got = index_type.sort_precedence()
+
+        self.assertEqual(SortPrecedence.BEFORE_CONTENT, got)
+
+    def test_sort_precedence_after(self):
+        index_type = DevdocsIndexType(
+            name="Appendix A: List of ZIMs",
+            count=0,
+            slug="",
+        )
+
+        got = index_type.sort_precedence()
+
+        self.assertEqual(SortPrecedence.AFTER_CONTENT, got)
+
+
+class TestNavigationSection(TestCase):
+    def test_count_empty(self):
+        section = NavigationSection(name="", links=[])
+
+        got = section.count
+
+        self.assertEqual(0, got)
+
+    def test_count_non_empty(self):
+        section = NavigationSection(
+            name="",
+            links=[
+                DevdocsIndexEntry(name="Foo 1", path="foo#1", type=None),
+            ],
+        )
+
+        got = section.count
+
+        self.assertEqual(1, got)
+
+    def test_contains_page(self):
+        section = NavigationSection(
+            name="",
+            links=[
+                DevdocsIndexEntry(name="Foo 1", path="foo#1", type=None),
+                DevdocsIndexEntry(name="Foo 2", path="foo#2", type=None),
+                DevdocsIndexEntry(name="Bar", path="bar", type=None),
+            ],
+        )
+
+        self.assertTrue(section.contains_page("foo"))
+        self.assertTrue(section.contains_page("bar"))
+        self.assertFalse(section.contains_page("bazz"))
+
 
 class TestDevdocsIndex(TestCase):
     def test_unmarshal_minimal(self):
@@ -273,6 +343,74 @@ class TestDevdocsIndex(TestCase):
                 ],
             ),
             index,
+        )
+
+    def test_build_navigation(self):
+        index = DevdocsIndex(
+            entries=[
+                DevdocsIndexEntry(name="Appendix 1", path="", type="Appendix"),
+                DevdocsIndexEntry(name="Middle 1", path="", type="Middle"),
+                DevdocsIndexEntry(name="Appendix 2", path="", type="Appendix"),
+                DevdocsIndexEntry(name="Tutorial 1", path="", type="Tutorials"),
+                DevdocsIndexEntry(name="Middle 2", path="", type="Middle"),
+                DevdocsIndexEntry(name="Tutorial 2", path="", type="Tutorials"),
+            ],
+            types=[
+                DevdocsIndexType(name="Appendix", count=2, slug=""),
+                DevdocsIndexType(name="Tutorials", count=2, slug=""),
+                DevdocsIndexType(name="Middle", count=2, slug=""),
+            ],
+        )
+
+        got = index.build_navigation()
+
+        self.assertEqual(
+            [
+                NavigationSection(
+                    name="Tutorials",
+                    links=[
+                        DevdocsIndexEntry(name="Tutorial 1", path="", type="Tutorials"),
+                        DevdocsIndexEntry(name="Tutorial 2", path="", type="Tutorials"),
+                    ],
+                ),
+                NavigationSection(
+                    name="Middle",
+                    links=[
+                        DevdocsIndexEntry(name="Middle 1", path="", type="Middle"),
+                        DevdocsIndexEntry(name="Middle 2", path="", type="Middle"),
+                    ],
+                ),
+                NavigationSection(
+                    name="Appendix",
+                    links=[
+                        DevdocsIndexEntry(name="Appendix 1", path="", type="Appendix"),
+                        DevdocsIndexEntry(name="Appendix 2", path="", type="Appendix"),
+                    ],
+                ),
+            ],
+            got,
+        )
+
+    def test_build_navigation_ignores_none(self):
+        index = DevdocsIndex(
+            entries=[
+                DevdocsIndexEntry(name="Appendix 1", path="", type=None),
+            ],
+            types=[
+                DevdocsIndexType(name="Appendix", count=1, slug=""),
+            ],
+        )
+
+        got = index.build_navigation()
+
+        self.assertEqual(
+            [
+                NavigationSection(
+                    name="Appendix",
+                    links=[],
+                ),
+            ],
+            got,
         )
 
 

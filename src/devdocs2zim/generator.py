@@ -1,20 +1,37 @@
 import argparse
+import datetime
 import os
 import re
 from collections import defaultdict
+from pathlib import Path
 
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pydantic import BaseModel
 from zimscraperlib.constants import (  # pyright: ignore[reportMissingTypeStubs]
     MAXIMUM_DESCRIPTION_METADATA_LENGTH,
     MAXIMUM_LONG_DESCRIPTION_METADATA_LENGTH,
     RECOMMENDED_MAX_TITLE_LENGTH,
 )
+from zimscraperlib.zim import (  # pyright: ignore[reportMissingTypeStubs]
+    Creator,
+    StaticItem,
+)
 
 from devdocs2zim.client import (
     DevdocsClient,
+    DevdocsIndex,
+    DevdocsIndexEntry,
     DevdocsMetadata,
 )
-from devdocs2zim.constants import logger
+from devdocs2zim.constants import LANGUAGE_ISO_639_3, NAME, ROOT_DIR, VERSION, logger
+
+# Content to display for pages missing from DevDocs.
+MISSING_PAGE = (
+    "<h2>This documentation is missing.</h2>"
+    "<p>This is an error with the openZIM DevDocs scraper, not your ZIM reader e.g. "
+    'Kiwix. Please <a href="https://github.com/openzim/devdocs/issues">'
+    "file an issue with the scraper</a>.</p>"
+)
 
 
 class InvalidFormatError(Exception):
@@ -274,15 +291,236 @@ class Generator:
 
         os.makedirs(self.output_folder, exist_ok=True)
 
-    def run(self) -> None:
+        # jinja2 environment setup
+        self.env = Environment(  # type: ignore
+            loader=FileSystemLoader(ROOT_DIR.joinpath("templates")),
+            autoescape=select_autoescape(),
+        )
+
+        self.page_template = self.env.get_template("page.html")  # type: ignore
+        self.licenses_template = self.env.get_template("licenses.txt")  # type: ignore
+
+        self.logo_path = self.asset_path("devdocs_48.png")
+        self.copyright_path = self.asset_path("COPYRIGHT")
+        self.license_path = self.asset_path("LICENSE")
+
+    @staticmethod
+    def asset_path(name: str) -> Path:
+        """Returns the path to name in the third_party/devdocs folder.
+
+        Raises ValueError if the resource doesn't exist.
+        """
+        path = ROOT_DIR.joinpath("third_party", "devdocs", name)
+        if not path.exists():
+            raise ValueError(f"File not found at {path}")
+        return path
+
+    def load_common_files(self) -> list[StaticItem]:
+        """Loads common assets for the output."""
+        static_files: list[StaticItem] = []
+
+        logger.info("Fetching common CSS...")
+        app_css = self.devdocs_client.read_application_css()
+        logger.debug(f"  Found app CSS with {len(app_css)} chars.")
+        static_files.append(
+            StaticItem(
+                path="application.css",
+                content=app_css,
+                is_front=False,
+                mimetype="text/css",
+            )
+        )
+
+        static_files.append(
+            StaticItem(
+                # Documentation doesn't have file extensions so this
+                # file won't conflict with the dynamic content.
+                path="licenses.txt",
+                content=self.licenses_template.render(  # type: ignore
+                    copyright=self.copyright_path.read_text(),
+                    license=self.license_path.read_text(),
+                ),
+                is_front=True,
+                mimetype="text/plain",
+            )
+        )
+
+        return static_files
+
+    def run(self) -> list[Path]:
         """Run the generator to fetch content and produce ZIMs."""
 
         # Load docs first to fail fast before fetching additional resources.
         all_docs = self.devdocs_client.list_docs()
         selected_doc_metadata = self.doc_filter.filter(all_docs)
 
-        # List all docs and copy one by one
+        # Check formatting early to bail if any templates are invalid.
         for doc_metadata in selected_doc_metadata:
-            logger.info(f"Fetching {doc_metadata.slug}")
+            self.zim_config.format(doc_metadata.placeholders())
 
-        raise NotImplementedError("ZIM creation is not yet implemented")
+        common_resources = self.load_common_files()
+
+        # List all docs and copy one by one
+        generated: list[Path] = []
+        for doc_metadata in selected_doc_metadata:
+            # TODO(#11): Add progress tracker here.
+            generated.append(
+                self.generate_zim(
+                    doc_metadata,
+                    common_resources,
+                )
+            )
+
+        return generated
+
+    def generate_zim(
+        self, doc_metadata: DevdocsMetadata, common_resources: list[StaticItem]
+    ) -> Path:
+        """Generates a zim for a single document.
+
+        Returns the path to the gernated ZIM.
+        """
+        logger.info(f"Generating ZIM for {doc_metadata.slug}")
+
+        formatted_config = self.zim_config.format(doc_metadata.placeholders())
+        zim_path = Path(self.output_folder, f"{formatted_config.name_format}.zim")
+
+        # Don't clobber existing files so a user can resume a failed run.
+        if zim_path.exists():
+            logger.warning(f"  Skipping, {zim_path} already exists.")
+            return zim_path
+
+        logger.info(f"  Writing to: {zim_path}")
+
+        creator = Creator(zim_path, "index")
+        creator.config_metadata(
+            Name=formatted_config.name_format,
+            Title=formatted_config.title_format,
+            Publisher=formatted_config.publisher,
+            Date=datetime.datetime.now(tz=datetime.UTC).date(),
+            Creator=formatted_config.creator,
+            Description=formatted_config.description_format,
+            LongDescription=formatted_config.long_description_format,
+            # As of 2024-07-28 all documentation is in English.
+            Language=LANGUAGE_ISO_639_3,
+            Tags=formatted_config.tags,
+            Scraper=f"{NAME} v{VERSION}",
+            Illustration_48x48_at_1=self.logo_path.read_bytes(),
+        )
+
+        # Disable indexing because it won't be available in the JS frontend
+        # and causes significant performance issues with rendered sidebars.
+        creator.config_indexing(False)
+
+        # Start creator early to detect problems early.
+        with creator as started_creator:
+            logger.info("  Fetching the index...")
+            index = self.devdocs_client.get_index(doc_metadata.slug)
+            logger.debug(f"  The index has {len(index.entries)} entries.")
+
+            logger.info("  Fetching the document database...")
+            db = self.devdocs_client.get_db(doc_metadata.slug)
+            logger.debug(f"  The database has {len(db)} entries.")
+
+            self.add_zim_contents(
+                creator=started_creator,
+                doc_metadata=doc_metadata,
+                index=index,
+                db=db,
+                common_resources=common_resources,
+            )
+        return zim_path
+
+    @staticmethod
+    def page_titles(pages: list[DevdocsIndexEntry]) -> dict[str, str]:
+        """Returns a map between page paths in the DB and their "best" title.
+
+        The best title is either the first navigation item that opens the page
+        to the top (i.e. without a path fragment) or the first navigation item
+        that opens the page if none open to the top.
+        """
+
+        page_to_title: dict[str, str] = {}
+        for page in pages:
+            path_without_fragment = page.path_without_fragment
+            if path_without_fragment == page.path:
+                page_to_title[path_without_fragment] = page.name
+            elif path_without_fragment not in page_to_title:
+                page_to_title[path_without_fragment] = page.name
+
+        return page_to_title
+
+    def add_zim_contents(
+        self,
+        creator: Creator,
+        doc_metadata: DevdocsMetadata,
+        index: DevdocsIndex,
+        db: dict[str, str],
+        common_resources: list[StaticItem],
+    ):
+        """Adds the doc conents to the ZIM.
+
+        Parameters:
+          creator: ZIM writer.
+          doc_metadata: Document metadata for generating common pages.
+          index: Documentation index for the navigation bar.
+          db: Mapping between documentation path and HTML content.
+          common_resources: Static content to add to the documentation.
+        """
+
+        logger.info("  Adding common resources...")
+        for resource in common_resources:
+            creator.add_item(resource)  # type: ignore
+
+        page_to_title = self.page_titles(index.entries)
+        # Explicitly inject the index which exists for every documentation set
+        # but isn't in the dynamic list of pages.
+        page_to_title["index"] = f"{doc_metadata.name} Documentation"
+
+        nav_sections = index.build_navigation()
+
+        logger.info(f"  Rendering {len(page_to_title)} pages...")
+        counter = 0
+        for path, title in page_to_title.items():
+            num_slashes = path.count("/")
+            rel_prefix = "../" * num_slashes
+
+            content = MISSING_PAGE
+            if path in db:
+                content = db.get(path)
+            else:
+                logger.warning(
+                    f"  DevDocs is missing content for {title!r} at {path!r}."
+                )
+
+            # NOTE: Profiling indicates Jinja templating takes about twice
+            # the CPU time as adding items without compression. This appears to
+            # be because of the navigation bar.
+            page_content = self.page_template.render(  # type: ignore
+                rel_prefix=rel_prefix,
+                nav_sections=nav_sections,
+                devdocs_metadata=doc_metadata,
+                title=title,
+                path=path,
+                # Fill missing DevDocs content with indications that the issue
+                # isn't with this generator.
+                content=content,
+            )
+            creator.add_item_for(  # type: ignore
+                path,
+                title=title,
+                content=page_content,  # type: ignore
+                is_front=True,
+                # Compression is needed because navigation is similar across pages.
+                # Large documentation like Ansible may have ~6000 items in the
+                # navigation bar.
+                should_compress=True,
+                mimetype="text/html",
+            )
+
+            # Tracking metadta
+            counter += 1
+            if counter % 100 == 0:
+                logger.info(f"  Progress {counter} / {len(page_to_title)} pages")
+
+        logger.info("  Finished adding contents.")

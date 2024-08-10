@@ -1,9 +1,23 @@
+import re
+from collections import defaultdict
+from enum import Enum
+from functools import cached_property
+
 import requests
-from pydantic import BaseModel, TypeAdapter
+from pydantic import BaseModel, TypeAdapter, computed_field
 
 from devdocs2zim.constants import logger
 
 HTTP_TIMEOUT_SECONDS = 15
+
+# These regular expressions are extracted from the DevDocs frontend.
+# The expression definitions haven't changed in ~8 years as of 2024-07-28:
+# https://github.com/freeCodeCamp/devdocs/blob/e28f81d3218bdbad7eac0540c58c11c7fe1d33d3/assets/javascripts/collections/types.js#L3
+BEFORE_CONTENT_PATTERN = re.compile(
+    r"(^|\()(guides?|tutorials?|reference|book|getting\ started|manual|examples)($|[\):])",  # noqa: E501
+    re.IGNORECASE,
+)
+AFTER_CONTENT_PATTERN = re.compile(r"appendix", re.IGNORECASE)
 
 
 class DevdocsMetadataLinks(BaseModel):
@@ -74,12 +88,23 @@ class DevdocsIndexEntry(BaseModel):
     path: str
 
     # Name of the type (section) the entry is located under.
-    type: str
+    # If None, the entry is not displayed.
+    type: str | None
 
     @property
     def path_without_fragment(self) -> str:
         """Key in db.json for the file's contents."""
         return self.path.split("#")[0]
+
+
+class SortPrecedence(Enum):
+    """Represents where to place section in the navbar."""
+
+    # NOTE: Definition order must match display order.
+
+    BEFORE_CONTENT = 0
+    CONTENT = 1
+    AFTER_CONTENT = 2
 
 
 class DevdocsIndexType(BaseModel):
@@ -94,6 +119,39 @@ class DevdocsIndexType(BaseModel):
     # Section slug. This appears to be unused.
     slug: str
 
+    def sort_precedence(self) -> SortPrecedence:
+        """Determines where this section should be displayed in the navigation."""
+        if BEFORE_CONTENT_PATTERN.match(self.name):
+            return SortPrecedence.BEFORE_CONTENT
+
+        if AFTER_CONTENT_PATTERN.match(self.name):
+            return SortPrecedence.AFTER_CONTENT
+
+        return SortPrecedence.CONTENT
+
+
+class NavigationSection(BaseModel):
+    """Represents a single section of a devdocs navigation tree."""
+
+    # Heading information for the group of links.
+    name: str
+    # Links to display in the section.
+    links: list[DevdocsIndexEntry]
+
+    @computed_field
+    @property
+    def count(self) -> int:
+        """Number of links in the section."""
+        return len(self.links)
+
+    @cached_property
+    def _contained_pages(self) -> set[str]:
+        return {link.path_without_fragment for link in self.links}
+
+    def contains_page(self, page_path: str) -> bool:
+        """Returns whether this section contains the given page."""
+        return page_path in self._contained_pages
+
 
 class DevdocsIndex(BaseModel):
     """Represents entries in the /<slug>/index.json file for each resource."""
@@ -102,9 +160,35 @@ class DevdocsIndex(BaseModel):
     entries: list[DevdocsIndexEntry]
 
     # List of "types" or section headings.
-    # These are displayed mostly in order, except regular expressions are used to sort:
-    # https://github.com/freeCodeCamp/devdocs/blob/e28f81d3218bdbad7eac0540c58c11c7fe1d33d3/assets/javascripts/collections/types.js#L3
+    # These are displayed in the order they're found grouped by sort_precedence.
     types: list[DevdocsIndexType]
+
+    def build_navigation(self) -> list[NavigationSection]:
+        """Builds a navigation hierarchy that's soreted correctly for rendering."""
+
+        sections_by_precedence: dict[SortPrecedence, list[DevdocsIndexType]] = (
+            defaultdict(list)
+        )
+        for section in self.types:
+            sections_by_precedence[section.sort_precedence()].append(section)
+
+        links_by_section_name: dict[str, list[DevdocsIndexEntry]] = defaultdict(list)
+        for entry in self.entries:
+            if entry.type is None:
+                continue
+            links_by_section_name[entry.type].append(entry)
+
+        output: list[NavigationSection] = []
+        for precedence in SortPrecedence:
+            for section in sections_by_precedence[precedence]:
+                output.append(
+                    NavigationSection(
+                        name=section.name,
+                        links=links_by_section_name[section.name],
+                    )
+                )
+
+        return output
 
 
 class DevdocsClient:

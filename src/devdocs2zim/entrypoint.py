@@ -12,6 +12,19 @@ from devdocs2zim.constants import (
 from devdocs2zim.generator import DocFilter, Generator, ZimConfig
 
 
+def zim_defaults() -> ZimConfig:
+    """Returns the default configuration for ZIM generation."""
+    return ZimConfig(
+        name_format="devdocs_{slug_without_version}_{version}",
+        creator="DevDocs",
+        publisher="openZIM",
+        title_format="{full_name} Docs",
+        description_format="{full_name} docs by DevDocs",
+        long_description_format=None,
+        tags="devdocs;{slug_without_version}",
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog=NAME,
@@ -38,15 +51,7 @@ def main() -> None:
     # ZIM configuration flags
     ZimConfig.add_flags(
         parser,
-        ZimConfig(
-            name_format="devdocs_{slug_without_version}_{version}",
-            creator="DevDocs",
-            publisher="openZIM",
-            title_format="{full_name} Docs",
-            description_format="{full_name} docs by DevDocs",
-            long_description_format=None,
-            tags="devdocs;{slug_without_version}",
-        ),
+        zim_defaults(),
     )
 
     # Document selection flags

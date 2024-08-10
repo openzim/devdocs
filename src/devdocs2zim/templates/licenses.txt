@@ -1,0 +1,10 @@
+{# The license page is intentionally plain text to ensure it's readable. -#}
+This work contains resources from https://DevDocs.io licensed under the following license and copyright notice.
+
+COPYRIGHT
+
+{{ copyright | indent(4, true)}}
+
+LICENSE
+
+{{ license | indent(4, true)}}
