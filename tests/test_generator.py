@@ -1,9 +1,19 @@
 import argparse
+from tempfile import TemporaryDirectory
 from unittest import TestCase
+from unittest.mock import create_autospec
 
-from devdocs2zim.client import DevdocsMetadata
+from devdocs2zim.client import (
+    DevdocsClient,
+    DevdocsIndex,
+    DevdocsIndexEntry,
+    DevdocsIndexType,
+    DevdocsMetadata,
+)
+from devdocs2zim.entrypoint import zim_defaults
 from devdocs2zim.generator import (
     DocFilter,
+    Generator,
     InvalidFormatError,
     MissingDocumentError,
     ZimConfig,
@@ -184,7 +194,7 @@ class TestDocFilter(TestCase):
         parser = argparse.ArgumentParser(exit_on_error=False)
         DocFilter.add_flags(parser)
 
-        self.assertRaises(SystemExit, parser.parse_args, args=[])
+        self.assertRaises(argparse.ArgumentError, parser.parse_args, args=[])
 
     def test_flags_regex(self):
         parser = argparse.ArgumentParser()
@@ -274,3 +284,94 @@ class TestDocFilter(TestCase):
             ],
             got,
         )
+
+
+class TestGenerator(TestCase):
+    def setUp(self):
+        self.temp_dir = TemporaryDirectory()
+        output_folder = self.temp_dir.__enter__()
+
+        self.mock_client = create_autospec(DevdocsClient)
+
+        self.generator = Generator(
+            devdocs_client=self.mock_client,
+            doc_filter=DocFilter(
+                all=True, first=None, slugs=None, skip_slug_regex=None
+            ),
+            output_folder=output_folder,
+            zim_config=zim_defaults(),
+        )
+
+    def tearDown(self):
+        self.temp_dir.__exit__(None, None, None)
+
+    def test_asset_path_missing(self):
+        self.assertRaises(ValueError, Generator.asset_path, "does_not_exist")
+
+    def test_asset_path_exists(self):
+        got = Generator.asset_path("README.md")
+
+        self.assertTrue(got.exists())
+
+    def test_load_common_files(self):
+        got = self.generator.load_common_files()
+
+        # Check names because they're referenced in templates
+        self.assertEqual(
+            {"licenses.txt", "application.css"},
+            {f.path for f in got},  # type: ignore
+        )
+
+    def test_run_no_documents(self):
+        got = self.generator.run()
+
+        self.assertEqual([], got)
+
+    def test_run_e2e(self):
+        self.mock_client.read_application_css.return_value = ".mock_css {}"
+        self.mock_client.list_docs.return_value = [
+            DevdocsMetadata(name="MockDoc", slug="mockdoc")
+        ]
+        self.mock_client.get_index.return_value = DevdocsIndex(
+            entries=[
+                DevdocsIndexEntry(
+                    name="Mock Entry", path="mock-entry", type="Mock Header"
+                ),
+                DevdocsIndexEntry(
+                    name="Missing Entry", path="missing", type="Mock Header"
+                ),
+            ],
+            types=[
+                DevdocsIndexType(name="Mock Header", count=1, slug="headers"),
+            ],
+        )
+        self.mock_client.get_db.return_value = {
+            "mock-entry": "Entry Value",
+            "index": "Index Value",
+        }
+
+        got = self.generator.run()
+
+        self.assertEqual(1, len(got))
+
+    def test_page_titles_no_fragment(self):
+        pages = [
+            DevdocsIndexEntry(name="Mock Sub1", path="mock#subheading1", type=None),
+            DevdocsIndexEntry(name="Mock Top", path="mock", type=None),
+            DevdocsIndexEntry(name="Mock Sub2", path="mock#subheading2", type=None),
+        ]
+
+        got = Generator.page_titles(pages)
+
+        self.assertEqual({"mock": "Mock Top"}, got)
+
+    def test_page_titles_only_fragment(self):
+        pages = [
+            DevdocsIndexEntry(name="Mock Sub1", path="mock#subheading1", type=None),
+            DevdocsIndexEntry(name="Mock Sub2", path="mock#subheading2", type=None),
+        ]
+
+        got = Generator.page_titles(pages)
+
+        # First fragment wins if no page points to the top
+        self.assertEqual({"mock": "Mock Sub1"}, got)
