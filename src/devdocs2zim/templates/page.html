@@ -29,7 +29,7 @@
                 <a href="{{rel_prefix | safe}}index" class="_list-item">{{devdocs_metadata.name}}</a>
                 <div class="_list">
                     {% for section in nav_sections %}
-                    <details {% if section.contains_page(path) %}open{% endif %}>
+                    <details {% if section.opens_for_page(path) %}open{% endif %}>
                         <summary>
                             <span class="_list-item" style="display:inline; box-shadow: none;">
                                 <span class="_list-count">{{ section.count | safe}}</span>

@@ -280,7 +280,7 @@ class TestNavigationSection(TestCase):
 
         self.assertEqual(1, got)
 
-    def test_contains_page(self):
+    def test_opens_for_page(self):
         section = NavigationSection(
             name="",
             links=[
@@ -290,9 +290,20 @@ class TestNavigationSection(TestCase):
             ],
         )
 
-        self.assertTrue(section.contains_page("foo"))
-        self.assertTrue(section.contains_page("bar"))
-        self.assertFalse(section.contains_page("bazz"))
+        self.assertTrue(section.opens_for_page("foo"))
+        self.assertTrue(section.opens_for_page("bar"))
+        self.assertFalse(section.opens_for_page("bazz"))
+
+    def test_opens_for_page_index(self):
+        section = NavigationSection(
+            name="",
+            links=[
+                DevdocsIndexEntry(name="Index", path="index", type=None),
+            ],
+        )
+
+        # Links to the index are special cases and shouldn't open.
+        self.assertFalse(section.opens_for_page("index"))
 
 
 class TestDevdocsIndex(TestCase):

@@ -148,8 +148,15 @@ class NavigationSection(BaseModel):
     def _contained_pages(self) -> set[str]:
         return {link.path_without_fragment for link in self.links}
 
-    def contains_page(self, page_path: str) -> bool:
-        """Returns whether this section contains the given page."""
+    def opens_for_page(self, page_path: str) -> bool:
+        """Returns whether this section should be rendered open for the given page."""
+
+        # Some docs like Lua or CoffeeScript have all of their content in the index.
+        # Others like RequireJS are split between index and additional pages.
+        # We don't want sections opening when the user navigates to the index.
+        if page_path == "index":
+            return False
+
         return page_path in self._contained_pages
 
 
