@@ -126,12 +126,14 @@ The following formatting placeholders are supported:
 * `{name}`: Human readable name of the resource e.g. `Python`.
 * `{full_name}`: Name with optional version for the resource e.g. `Python 3.12`.
 * `{slug}`: Devdocs slug for the resource e.g. `python~3.12`.
+* `{clean_slug}`: Slug with non alphanumeric/period characters replaced with `-` e.g. `python-3.12`.
 * `{slug_without_version}`: Devdocs slug for the resource without the version e.g. `python`.
 * `{version}`: Shortened version displayed in devdocs, if any e.g. `3.12`.
 * `{release}`: Specific release of the software the documentation is for, if any e.g. `3.12.1`.
 * `{attribution}`: License and attribution information about the resource.
 * `{home_link}`: Link to the project's home page, if any: e.g. `https://python.org`.
 * `{code_link}`: Link to the project's source, if any: e.g. `https://github.com/python/cpython`.
+* `{period}`: The current date in `YYYY-MM` format e.g. `2024-02`.
 
 ## Developing
 

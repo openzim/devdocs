@@ -43,7 +43,9 @@ class InvalidFormatError(Exception):
 class ZimConfig(BaseModel):
     """Common configuration for building ZIM files."""
 
-    # File name/name for the ZIM.
+    # File name for the ZIM.
+    file_name_format: str
+    # Name for the ZIM.
     name_format: str
     # Human readable title for the ZIM.
     title_format: str
@@ -71,6 +73,14 @@ class ZimConfig(BaseModel):
             "--publisher",
             help=f"Custom publisher name. Default: {defaults.publisher!r}",
             default=defaults.publisher,
+        )
+
+        parser.add_argument(
+            "--file-name-format",
+            help="Custom file name format for individual ZIMs. "
+            f"Default: {defaults.file_name_format!r}",
+            default=defaults.file_name_format,
+            metavar="FORMAT",
         )
 
         parser.add_argument(
@@ -149,6 +159,7 @@ class ZimConfig(BaseModel):
             return string
 
         return ZimConfig(
+            file_name_format=fmt(self.file_name_format),
             name_format=fmt(self.name_format),
             title_format=check_length(
                 fmt(self.title_format),
@@ -383,7 +394,7 @@ class Generator:
         logger.info(f"Generating ZIM for {doc_metadata.slug}")
 
         formatted_config = self.zim_config.format(doc_metadata.placeholders())
-        zim_path = Path(self.output_folder, f"{formatted_config.name_format}.zim")
+        zim_path = Path(self.output_folder, f"{formatted_config.file_name_format}.zim")
 
         # Don't clobber existing files so a user can resume a failed run.
         if zim_path.exists():
