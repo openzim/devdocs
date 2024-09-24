@@ -5,6 +5,7 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
+from bs4 import BeautifulSoup
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pydantic import BaseModel
 from zimscraperlib.constants import (  # pyright: ignore[reportMissingTypeStubs]
@@ -16,7 +17,11 @@ from zimscraperlib.zim import (  # pyright: ignore[reportMissingTypeStubs]
     Creator,
     StaticItem,
 )
+from zimscraperlib.zim.indexing import (  # pyright: ignore[reportMissingTypeStubs]
+    IndexData,
+)
 
+# pyright: ignore[reportMissingTypeStubs]
 from devdocs2zim.client import (
     DevdocsClient,
     DevdocsIndex,
@@ -339,6 +344,7 @@ class Generator:
                 content=app_css,
                 is_front=False,
                 mimetype="text/css",
+                auto_index=False,
             )
         )
 
@@ -353,6 +359,7 @@ class Generator:
                 ),
                 is_front=True,
                 mimetype="text/plain",
+                auto_index=False,
             )
         )
 
@@ -418,10 +425,6 @@ class Generator:
             Scraper=f"{NAME} v{VERSION}",
             Illustration_48x48_at_1=self.logo_path.read_bytes(),
         )
-
-        # Disable indexing because it won't be available in the JS frontend
-        # and causes significant performance issues with rendered sidebars.
-        creator.config_indexing(False)
 
         # Start creator early to detect problems early.
         with creator as started_creator:
@@ -496,13 +499,15 @@ class Generator:
             num_slashes = path.count("/")
             rel_prefix = "../" * num_slashes
 
-            content = MISSING_PAGE
-            if path in db:
-                content = db.get(path)
-            else:
+            content = db.get(path, MISSING_PAGE)
+            if path not in db:
                 logger.warning(
                     f"  DevDocs is missing content for {title!r} at {path!r}."
                 )
+
+            plain_content = " ".join(
+                BeautifulSoup(content, features="lxml").find_all(string=True)
+            )
 
             # NOTE: Profiling indicates Jinja templating takes about twice
             # the CPU time as adding items without compression. This appears to
@@ -527,6 +532,11 @@ class Generator:
                 # navigation bar.
                 should_compress=True,
                 mimetype="text/html",
+                # Only index page content rather than navigation data.
+                index_data=IndexData(
+                    title=title,
+                    content=plain_content,
+                ),
             )
 
             # Tracking metadta

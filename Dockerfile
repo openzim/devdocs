@@ -5,6 +5,7 @@ LABEL org.opencontainers.image.source https://github.com/openzim/devdocs
 RUN apt-get update \
      && apt-get install -y --no-install-recommends \
      libmagic1 \
+     libcairo2 \
      && rm -rf /var/lib/apt/lists/* \
      && python -m pip install --no-cache-dir -U \
       pip
