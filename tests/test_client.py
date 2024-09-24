@@ -1,3 +1,4 @@
+import datetime
 from unittest import TestCase
 from unittest.mock import ANY, create_autospec, patch
 
@@ -111,19 +112,21 @@ class TestDevdocsMetadata(TestCase):
     def test_placeholders_minimal(self):
         metadata = DevdocsMetadata(name="test", slug="test~1.23")
 
-        placeholders = metadata.placeholders()
+        placeholders = metadata.placeholders(clock=lambda: datetime.date(2001, 2, 3))
 
         self.assertEqual(
             {
                 "name": "test",
                 "full_name": "test",
                 "slug": "test~1.23",
+                "clean_slug": "test-1.23",
                 "version": "",
                 "release": "",
                 "attribution": "",
                 "home_link": "",
                 "code_link": "",
                 "slug_without_version": "test",
+                "period": "2001-02",
             },
             placeholders,
         )
@@ -141,19 +144,21 @@ class TestDevdocsMetadata(TestCase):
             attribution="&copy; 2022 The Kubernetes Authors",
         )
 
-        placeholders = metadata.placeholders()
+        placeholders = metadata.placeholders(clock=lambda: datetime.date(2001, 2, 3))
 
         self.assertEqual(
             {
                 "name": "Kubernetes",
                 "full_name": "Kubernetes 1.28.1",
                 "slug": "kubernetes~1.28",
+                "clean_slug": "kubernetes-1.28",
                 "version": "1.28.1",
                 "release": "1.28",
                 "attribution": "&copy; 2022 The Kubernetes Authors",
                 "home_link": "https://kubernetes.io/",
                 "code_link": "https://github.com/kubernetes/kubernetes",
                 "slug_without_version": "kubernetes",
+                "period": "2001-02",
             },
             placeholders,
         )

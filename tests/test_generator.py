@@ -23,6 +23,7 @@ from devdocs2zim.generator import (
 class TestZimConfig(TestCase):
     def defaults(self) -> ZimConfig:
         return ZimConfig(
+            file_name_format="default_file_name_format",
             name_format="default_name_format",
             title_format="default_title_format",
             publisher="default_publisher",
@@ -54,6 +55,8 @@ class TestZimConfig(TestCase):
                     "publisher",
                     "--name-format",
                     "name-format",
+                    "--file-name-format",
+                    "file-name-format",
                     "--title-format",
                     "title-format",
                     "--description-format",
@@ -71,6 +74,7 @@ class TestZimConfig(TestCase):
                 creator="creator",
                 publisher="publisher",
                 name_format="name-format",
+                file_name_format="file-name-format",
                 title_format="title-format",
                 description_format="description-format",
                 long_description_format="long-description-format",
@@ -88,6 +92,7 @@ class TestZimConfig(TestCase):
 
     def test_format_only_allowed(self):
         to_format = ZimConfig(
+            file_name_format="{replace_me}",
             name_format="{replace_me}",
             title_format="{replace_me}",
             publisher="{replace_me}",
@@ -101,6 +106,7 @@ class TestZimConfig(TestCase):
 
         self.assertEqual(
             ZimConfig(
+                file_name_format="replaced",
                 name_format="replaced",
                 title_format="replaced",
                 publisher="{replace_me}",

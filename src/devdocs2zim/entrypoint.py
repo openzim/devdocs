@@ -15,7 +15,8 @@ from devdocs2zim.generator import DocFilter, Generator, ZimConfig
 def zim_defaults() -> ZimConfig:
     """Returns the default configuration for ZIM generation."""
     return ZimConfig(
-        name_format="devdocs_{slug_without_version}_{version}",
+        file_name_format="devdocs.io_en_{clean_slug}_{period}",
+        name_format="devdocs.io_en_{clean_slug}",
         creator="DevDocs",
         publisher="openZIM",
         title_format="{full_name} Docs",

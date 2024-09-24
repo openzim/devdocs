@@ -1,5 +1,7 @@
+import datetime
 import re
 from collections import defaultdict
+from collections.abc import Callable
 from enum import Enum
 from functools import cached_property
 
@@ -50,8 +52,14 @@ class DevdocsMetadata(BaseModel):
     def slug_without_version(self):
         return self.slug.split("~")[0]
 
-    def placeholders(self) -> dict[str, str]:
-        """Gets placeholders for filenames."""
+    def placeholders(
+        self, clock: Callable[[], datetime.date] = datetime.date.today
+    ) -> dict[str, str]:
+        """Gets placeholders for filenames.
+
+        Arguments:
+          clock: Override the default clock to use for producing the "period".
+        """
         home_link = ""
         code_link = ""
         if self.links is not None:
@@ -68,12 +76,14 @@ class DevdocsMetadata(BaseModel):
             "name": self.name,
             "full_name": full_name,
             "slug": self.slug,
+            "clean_slug": re.sub(r"[^.a-zA-Z0-9]", "-", self.slug),
             "version": self.version,
             "release": self.release,
             "attribution": self.attribution,
             "home_link": home_link,
             "code_link": code_link,
             "slug_without_version": self.slug_without_version,
+            "period": clock().strftime("%Y-%m"),
         }
 
 
