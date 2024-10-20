@@ -10,53 +10,22 @@
 <head>
     <meta charset="utf-8">
     <title>{{title}}</title>
+    {# Prefetch navbar to limit flash. #}
+    <link rel="preload" href="{{rel_prefix | safe}}assets/index.js" as="script" type="text/javascript" />
+
     <link rel="stylesheet" type="text/css" href="{{rel_prefix | safe}}application.css" />
-    <style type="text/css">
-        /* Make the <details> tag based navigation match the look and feel of devdocs.io. */
-        ._list-count, ._list-enable {
-            margin-right: .375rem;
-        }
-        ._list-item {
-            padding: .25rem;
-        }
-    </style>
+    <link rel="stylesheet" type="text/css" href="{{rel_prefix | safe}}assets/index.css" />
 </head>
 <body>
     <div class="_app">
-        {# Remove top padding which is usually reserved for the search bar. #}
-        <section class="_sidebar" style="padding-top: 0px">
-            <div class="_list">
-                <a href="{{rel_prefix | safe}}index" class="_list-item">{{devdocs_metadata.name}}</a>
-                <div class="_list">
-                    {% for section in nav_sections %}
-                    <details {% if section.opens_for_page(path) %}open{% endif %}>
-                        <summary>
-                            <span class="_list-item" style="display:inline; box-shadow: none;">
-                                <span class="_list-count">{{ section.count | safe}}</span>
-                                <span>{{ section.name }}</span>
-                            </span>
-                        </summary>
-                        <div class="_list">
-                            {% for link in section.links %}
-                                <a
-                                    href="{{rel_prefix | safe}}{{link.path | safe}}"
-                                    class="_list-item _list-hover {% if link.path == path %}focus active{% endif %}">
-                                    {{ link.name }}
-                                </a>
-                            {% endfor %}
-                        </div>
-                    </details>
-                    {% endfor %}
-                    <a href="{{rel_prefix | safe}}licenses.txt" class="_list-item">Open-source Licenses</a>
-                </div>
-            </div>
-        </section>
+        <devdocs-navbar current="{{path | safe}}" prefix="{{rel_prefix | safe}}" listing-src="{{rel_prefix | safe}}navbar.json"></devdocs-navbar>
         <div class="_container">
             <main class="_content">
                 <div class="_page _{{devdocs_metadata.slug_without_version | safe}}">{{content | safe}}</div>
             </main>
         </div>
     </div>
+    <script type="text/javascript" src="{{rel_prefix | safe}}assets/index.js"></script>
 </body>
 
 </html>

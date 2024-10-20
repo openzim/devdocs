@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 from unittest.mock import create_autospec
@@ -306,6 +307,7 @@ class TestGenerator(TestCase):
             ),
             output_folder=output_folder,
             zim_config=zim_defaults(),
+            zimui_dist=str(Path(__file__).parent / "testdata" / "zimui"),
         )
 
     def tearDown(self):
@@ -324,7 +326,7 @@ class TestGenerator(TestCase):
 
         # Check names because they're referenced in templates
         self.assertEqual(
-            {"licenses.txt", "application.css"},
+            {"licenses.txt", "application.css", "assets/index.css", "assets/index.js"},
             {f.path for f in got},  # type: ignore
         )
 
