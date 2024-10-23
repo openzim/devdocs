@@ -28,7 +28,14 @@ from devdocs2zim.client import (
     DevdocsIndexEntry,
     DevdocsMetadata,
 )
-from devdocs2zim.constants import LANGUAGE_ISO_639_3, NAME, ROOT_DIR, VERSION, logger
+from devdocs2zim.constants import (
+    LANGUAGE_ISO_639_3,
+    LICENSE_FILE,
+    NAME,
+    ROOT_DIR,
+    VERSION,
+    logger,
+)
 
 # Content to display for pages missing from DevDocs.
 MISSING_PAGE = (
@@ -291,6 +298,7 @@ class Generator:
         zim_config: ZimConfig,
         doc_filter: DocFilter,
         output_folder: str,
+        zimui_dist: str,
     ) -> None:
         """Initializes Generator.
 
@@ -299,11 +307,13 @@ class Generator:
             zim_config: Configuration for ZIM metadata.
             doc_filter: User supplied filter selecting with docs to convert.
             output_folder: Directory to write ZIMs into.
+            zimui_dist: Directory containing the zimui code.
         """
         self.devdocs_client = devdocs_client
         self.zim_config = zim_config
         self.doc_filter = doc_filter
         self.output_folder = output_folder
+        self.zimui_dist = Path(zimui_dist)
 
         os.makedirs(self.output_folder, exist_ok=True)
 
@@ -314,7 +324,7 @@ class Generator:
         )
 
         self.page_template = self.env.get_template("page.html")  # type: ignore
-        self.licenses_template = self.env.get_template("licenses.txt")  # type: ignore
+        self.licenses_template = self.env.get_template(LICENSE_FILE)  # type: ignore
 
         self.logo_path = self.asset_path("devdocs_48.png")
         self.copyright_path = self.asset_path("COPYRIGHT")
@@ -352,7 +362,7 @@ class Generator:
             StaticItem(
                 # Documentation doesn't have file extensions so this
                 # file won't conflict with the dynamic content.
-                path="licenses.txt",
+                path=LICENSE_FILE,
                 content=self.licenses_template.render(  # type: ignore
                     copyright=self.copyright_path.read_text(),
                     license=self.license_path.read_text(),
@@ -362,6 +372,29 @@ class Generator:
                 auto_index=False,
             )
         )
+
+        # Dynamic navbar `assets/index.js` MUST exist because it's referenced by
+        # the page.html template. Other files are added so they can be dynamically
+        # loaded by index.js if needed.
+        if not Path(self.zimui_dist, "assets", "index.js").exists():
+            raise ValueError(
+                f"Missing assets/index.js in {self.zimui_dist}. You might need to "
+                "build `zimui` or set --zimui-dist"
+            )
+
+        for file in Path(self.zimui_dist, "assets").rglob("*"):
+            if file.is_dir():
+                continue
+            path = Path(file).relative_to(self.zimui_dist).as_posix()
+
+            static_files.append(
+                StaticItem(
+                    path=path,
+                    filepath=file,
+                    is_front=False,
+                    auto_index=False,
+                )
+            )
 
         return static_files
 
@@ -490,6 +523,19 @@ class Generator:
         # Explicitly inject the index which exists for every documentation set
         # but isn't in the dynamic list of pages.
         page_to_title["index"] = f"{doc_metadata.name} Documentation"
+
+        nav_json = index.build_navbar_json(
+            name=doc_metadata.name, version=doc_metadata.version
+        )
+        creator.add_item(  # type: ignore
+            StaticItem(
+                path="navbar.json",
+                content=nav_json,
+                is_front=False,
+                mimetype="application/json",
+                auto_index=False,
+            )
+        )
 
         nav_sections = index.build_navigation()
 

@@ -1,3 +1,10 @@
+FROM node:20-alpine as zimui
+
+WORKDIR /src
+COPY zimui /src
+RUN yarn install --frozen-lockfile
+RUN yarn build
+
 FROM python:3.12-slim-bookworm
 LABEL org.opencontainers.image.source https://github.com/openzim/devdocs
 
@@ -24,5 +31,10 @@ COPY *.md /src/
 # Install + cleanup
 RUN pip install --no-cache-dir /src \
  && rm -rf /src
+
+# Copy zimui build output
+COPY --from=zimui /src/dist /src/zimui
+
+ENV DEVDOCS_ZIMUI_DIST=/src/zimui
 
 CMD ["devdocs2zim", "--help"]

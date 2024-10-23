@@ -12,7 +12,9 @@ from devdocs2zim.client import (
     DevdocsIndexType,
     DevdocsMetadata,
     DevdocsMetadataLinks,
-    NavigationSection,
+    NavbarDocument,
+    NavbarPageEntry,
+    NavbarSectionEntry,
     SortPrecedence,
 )
 
@@ -265,52 +267,6 @@ class TestDevdocsIndexType(TestCase):
         self.assertEqual(SortPrecedence.AFTER_CONTENT, got)
 
 
-class TestNavigationSection(TestCase):
-    def test_count_empty(self):
-        section = NavigationSection(name="", links=[])
-
-        got = section.count
-
-        self.assertEqual(0, got)
-
-    def test_count_non_empty(self):
-        section = NavigationSection(
-            name="",
-            links=[
-                DevdocsIndexEntry(name="Foo 1", path="foo#1", type=None),
-            ],
-        )
-
-        got = section.count
-
-        self.assertEqual(1, got)
-
-    def test_opens_for_page(self):
-        section = NavigationSection(
-            name="",
-            links=[
-                DevdocsIndexEntry(name="Foo 1", path="foo#1", type=None),
-                DevdocsIndexEntry(name="Foo 2", path="foo#2", type=None),
-                DevdocsIndexEntry(name="Bar", path="bar", type=None),
-            ],
-        )
-
-        self.assertTrue(section.opens_for_page("foo"))
-        self.assertTrue(section.opens_for_page("bar"))
-        self.assertFalse(section.opens_for_page("bazz"))
-
-    def test_opens_for_page_index(self):
-        section = NavigationSection(
-            name="",
-            links=[
-                DevdocsIndexEntry(name="Index", path="index", type=None),
-            ],
-        )
-
-        # Links to the index are special cases and shouldn't open.
-        self.assertFalse(section.opens_for_page("index"))
-
-
 class TestDevdocsIndex(TestCase):
     def test_unmarshal_minimal(self):
         index = DevdocsIndex.model_validate_json(r"""{"entries": [],"types": []}""")
@@ -382,25 +338,25 @@ class TestDevdocsIndex(TestCase):
 
         self.assertEqual(
             [
-                NavigationSection(
+                NavbarSectionEntry(
                     name="Tutorials",
-                    links=[
-                        DevdocsIndexEntry(name="Tutorial 1", path="", type="Tutorials"),
-                        DevdocsIndexEntry(name="Tutorial 2", path="", type="Tutorials"),
+                    children=[
+                        NavbarPageEntry(name="Tutorial 1", href=""),
+                        NavbarPageEntry(name="Tutorial 2", href=""),
                     ],
                 ),
-                NavigationSection(
+                NavbarSectionEntry(
                     name="Middle",
-                    links=[
-                        DevdocsIndexEntry(name="Middle 1", path="", type="Middle"),
-                        DevdocsIndexEntry(name="Middle 2", path="", type="Middle"),
+                    children=[
+                        NavbarPageEntry(name="Middle 1", href=""),
+                        NavbarPageEntry(name="Middle 2", href=""),
                     ],
                 ),
-                NavigationSection(
+                NavbarSectionEntry(
                     name="Appendix",
-                    links=[
-                        DevdocsIndexEntry(name="Appendix 1", path="", type="Appendix"),
-                        DevdocsIndexEntry(name="Appendix 2", path="", type="Appendix"),
+                    children=[
+                        NavbarPageEntry(name="Appendix 1", href=""),
+                        NavbarPageEntry(name="Appendix 2", href=""),
                     ],
                 ),
             ],
@@ -421,12 +377,48 @@ class TestDevdocsIndex(TestCase):
 
         self.assertEqual(
             [
-                NavigationSection(
+                NavbarSectionEntry(
                     name="Appendix",
-                    links=[],
+                    children=[],
                 ),
             ],
             got,
+        )
+
+    def test_build_navbar_json(self):
+        index = DevdocsIndex(
+            entries=[
+                DevdocsIndexEntry(name="Appendix 1", path="", type="Appendix"),
+                DevdocsIndexEntry(name="Appendix 2", path="", type="Appendix"),
+            ],
+            types=[
+                DevdocsIndexType(name="Appendix", count=2, slug=""),
+            ],
+        )
+
+        got = index.build_navbar_json(name="Test Navbar", version="v1")
+
+        self.assertEqual(
+            NavbarDocument.model_validate_json(
+                """
+                {
+                    "name": "Test Navbar",
+                    "landingHref": "index",
+                    "licenseHref": "licenses.txt",
+                    "version": "v1",
+                    "children": [
+                        {
+                            "name": "Appendix",
+                            "children": [
+                                {"name": "Appendix 1", "href": ""},
+                                {"name": "Appendix 2", "href": ""}
+                            ]
+                        }
+                    ]
+                }
+                """
+            ),
+            NavbarDocument.model_validate_json(got),
         )
 
 

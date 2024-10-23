@@ -1,0 +1,54 @@
+{
+    "name": "Bazel",
+    "landingHref": "/index.html",
+    "licenseHref": "/licenses.txt",
+    "version": "7.0.0",
+    "children": [
+        {
+            "name": "01 Heading",
+            "children": [
+                {
+                    "href": "/foo.html",
+                    "name": "Heading 1 Top"
+                },
+                {
+                    "href": "/foo.html#child1",
+                    "name": "Heading 1 child 1"
+                },
+                {
+                    "href": "/foo.html#child2",
+                    "name": "Heading 1 child 2"
+                },
+                {
+                    "href": "/foo.html#child3",
+                    "name": "Heading 1 child 3"
+                },
+                {
+                    "href": "/foo.html#child3",
+                    "name": "Heading 1 child 3 (duplicate)"
+                },
+                {
+                    "href": "/foo.html#child3",
+                    "name": "Heading 1 this is some very long text that should be truncated when it overflows"
+                }
+            ]
+        },
+        {
+            "name": "02 Heading",
+            "children": [
+                {
+                    "href": "/bar.html",
+                    "name": "Heading 2 Top"
+                },
+                {
+                    "href": "/bar.html#child1",
+                    "name": "Heading 2 child 1"
+                },
+                {
+                    "href": "/bar.html#child2",
+                    "name": "Heading 2 child 2"
+                }
+            ]
+        }
+    ]
+}
