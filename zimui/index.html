@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en" class="_theme-default">
+  <head>
+    <meta charset="UTF-8">
+    <!-- Hotlink the current DevDocs CSS for testing. -->
+    <link rel="stylesheet" type="text/css" href="https://devdocs.io/application.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Devdocs Navbar Example</title>
+  </head>
+  <body id="body">
+
+    <script type="module" src="/src/main.ts"></script>
+
+    <script type="text/javascript">
+      window.onload = () => {
+        // Dynamically create the navbar for testing so the current page path can change.
+        const navbar = document.createElement("devdocs-navbar")
+        navbar.setAttribute("current", window.location.pathname)
+        navbar.setAttribute("prefix", "")
+        navbar.setAttribute("listing-src", "/nav.json")
+
+        document.getElementById("body").prepend(navbar)
+      }
+    </script>
+  </body>
+</html>

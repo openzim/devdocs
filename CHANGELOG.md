@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Page navigation is now dynamically rendered reducing file sizes. (#24, #31)
 
 ## [0.1.0] - 2024-09-27
 

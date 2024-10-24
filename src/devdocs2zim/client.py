@@ -3,12 +3,12 @@ import re
 from collections import defaultdict
 from collections.abc import Callable
 from enum import Enum
-from functools import cached_property
 
 import requests
-from pydantic import BaseModel, TypeAdapter, computed_field
+from pydantic import BaseModel, ConfigDict, TypeAdapter
+from pydantic.alias_generators import to_camel
 
-from devdocs2zim.constants import logger
+from devdocs2zim.constants import DEVDOCS_LANDING_PAGE, LICENSE_FILE, logger
 
 HTTP_TIMEOUT_SECONDS = 15
 
@@ -140,34 +140,46 @@ class DevdocsIndexType(BaseModel):
         return SortPrecedence.CONTENT
 
 
-class NavigationSection(BaseModel):
-    """Represents a single section of a devdocs navigation tree."""
+class NavbarPageEntry(BaseModel):
+    """Model of the a page in the navbar."""
 
-    # Heading information for the group of links.
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    # Display name of the page e.g. "Introduction"
     name: str
-    # Links to display in the section.
-    links: list[DevdocsIndexEntry]
 
-    @computed_field
-    @property
-    def count(self) -> int:
-        """Number of links in the section."""
-        return len(self.links)
+    # Link to the page
+    href: str
 
-    @cached_property
-    def _contained_pages(self) -> set[str]:
-        return {link.path_without_fragment for link in self.links}
 
-    def opens_for_page(self, page_path: str) -> bool:
-        """Returns whether this section should be rendered open for the given page."""
+class NavbarSectionEntry(BaseModel):
+    """Model of the a section in the navbar."""
 
-        # Some docs like Lua or CoffeeScript have all of their content in the index.
-        # Others like RequireJS are split between index and additional pages.
-        # We don't want sections opening when the user navigates to the index.
-        if page_path == "index":
-            return False
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
-        return page_path in self._contained_pages
+    # Display name of the section e.g. "Tutorials"
+    name: str
+
+    # Pages in the section
+    children: list[NavbarPageEntry]
+
+
+class NavbarDocument(BaseModel):
+    """Model of the document to populate each page's navbar with."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    # Display name of the document e.g. "Lua"
+    name: str
+    # Link to the main root of the document. DevDocs makes this "index"
+    # implicitly.
+    landing_href: str = DEVDOCS_LANDING_PAGE
+    # Link to the main root of the document, usually "index"
+    license_href: str = LICENSE_FILE
+    # Version information to display.
+    version: str
+    # Sections to show
+    children: list[NavbarSectionEntry]
 
 
 class DevdocsIndex(BaseModel):
@@ -180,8 +192,8 @@ class DevdocsIndex(BaseModel):
     # These are displayed in the order they're found grouped by sort_precedence.
     types: list[DevdocsIndexType]
 
-    def build_navigation(self) -> list[NavigationSection]:
-        """Builds a navigation hierarchy that's soreted correctly for rendering."""
+    def build_navigation(self) -> list[NavbarSectionEntry]:
+        """Builds a navigation hierarchy that's sorted correctly for rendering."""
 
         sections_by_precedence: dict[SortPrecedence, list[DevdocsIndexType]] = (
             defaultdict(list)
@@ -189,23 +201,44 @@ class DevdocsIndex(BaseModel):
         for section in self.types:
             sections_by_precedence[section.sort_precedence()].append(section)
 
-        links_by_section_name: dict[str, list[DevdocsIndexEntry]] = defaultdict(list)
+        links_by_section_name: dict[str, list[NavbarPageEntry]] = defaultdict(list)
         for entry in self.entries:
             if entry.type is None:
                 continue
-            links_by_section_name[entry.type].append(entry)
+            links_by_section_name[entry.type].append(
+                NavbarPageEntry(
+                    name=entry.name,
+                    href=entry.path,
+                )
+            )
 
-        output: list[NavigationSection] = []
+        output: list[NavbarSectionEntry] = []
         for precedence in SortPrecedence:
             for section in sections_by_precedence[precedence]:
                 output.append(
-                    NavigationSection(
+                    NavbarSectionEntry(
                         name=section.name,
-                        links=links_by_section_name[section.name],
+                        children=links_by_section_name[section.name],
                     )
                 )
 
         return output
+
+    def build_navbar_json(self, name: str, version: str) -> str:
+        """Creates a navbar entry with the given name and version.
+
+        Parameters
+          name: Name of the root element in the navbar.
+          version: Version of the root element in the navbar.
+        """
+
+        document = NavbarDocument(
+            name=name,
+            version=version,
+            children=self.build_navigation(),
+        )
+
+        return document.model_dump_json(by_alias=True)  # type: ignore
 
 
 class DevdocsClient:

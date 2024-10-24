@@ -17,4 +17,10 @@ DEVDOCS_DOCUMENTS_URL = "https://documents.devdocs.io"
 # As of 2024-07-28 all documentation appears to be in English.
 LANGUAGE_ISO_639_3 = "eng"
 
+# File name for the licenses.txt template and output.
+LICENSE_FILE = "licenses.txt"
+
+# Implicit key of the landing page for each DevDocs document
+DEVDOCS_LANDING_PAGE = "index"
+
 logger = getLogger(NAME, level=logging.DEBUG)

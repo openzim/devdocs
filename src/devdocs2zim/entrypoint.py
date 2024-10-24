@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 
 from devdocs2zim.client import DevdocsClient
 from devdocs2zim.constants import (
@@ -71,6 +72,15 @@ def main() -> None:
         default=DEVDOCS_DOCUMENTS_URL,
     )
 
+    parser.add_argument(
+        "--zimui-dist",
+        type=str,
+        help=(
+            "Directory containing Vite build output from the Zim UI Vue.JS application"
+        ),
+        default=os.getenv("DEVDOCS_ZIMUI_DIST", "zimui/dist"),
+    )
+
     args = parser.parse_args()
 
     logger.setLevel(level=logging.DEBUG if args.debug else logging.INFO)
@@ -88,6 +98,7 @@ def main() -> None:
             zim_config=zim_config,
             output_folder=args.output_folder,
             doc_filter=doc_filter,
+            zimui_dist=args.zimui_dist,
         ).run()
     except Exception as e:
         logger.exception(e)
