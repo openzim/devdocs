@@ -8,6 +8,7 @@ a clean and user friendly format for storing content for offline usage.
 [![codecov](https://codecov.io/gh/openzim/devdocs/branch/main/graph/badge.svg)](https://codecov.io/gh/openzim/devdocs)
 [![PyPI version shields.io](https://img.shields.io/pypi/v/devdocs2zim.svg)](https://pypi.org/project/devdocs2zim/)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/devdocs2zim.svg)](https://pypi.org/project/devdocs2zim)
+[![Docker](https://ghcr-badge.egpl.dev/openzim/devdocs/latest_tag?label=docker)](https://ghcr.io/openzim/devdocs)
 
 
 ## Installation
