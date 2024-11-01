@@ -157,7 +157,7 @@ class TestDocFilter(TestCase):
             DocFilter(
                 all=True,
                 first=None,
-                slugs=None,
+                csv_slugs=None,
                 skip_slug_regex=None,
             ),
             got,
@@ -175,10 +175,34 @@ class TestDocFilter(TestCase):
             DocFilter(
                 all=False,
                 first=None,
-                slugs=["first", "second"],
+                csv_slugs=["first", "second"],
                 skip_slug_regex=None,
             ),
             got,
+        )
+        self.assertEqual(
+            ["first", "second"],
+            got.slugs,
+        )
+
+    def test_flags_slug_csv(self):
+        parser = argparse.ArgumentParser()
+        DocFilter.add_flags(parser)
+
+        got = DocFilter.of(parser.parse_args(args=["--slug", "first,second"]))
+
+        self.assertEqual(
+            DocFilter(
+                all=False,
+                first=None,
+                csv_slugs=["first,second"],
+                skip_slug_regex=None,
+            ),
+            got,
+        )
+        self.assertEqual(
+            ["first", "second"],
+            got.slugs,
         )
 
     def test_flags_first(self):
@@ -191,7 +215,7 @@ class TestDocFilter(TestCase):
             DocFilter(
                 all=False,
                 first=3,
-                slugs=None,
+                csv_slugs=None,
                 skip_slug_regex=None,
             ),
             got,
@@ -213,14 +237,16 @@ class TestDocFilter(TestCase):
             DocFilter(
                 all=True,
                 first=None,
-                slugs=None,
+                csv_slugs=None,
                 skip_slug_regex="^$",
             ),
             got,
         )
 
     def test_filter_all(self):
-        doc_filter = DocFilter(all=True, first=None, slugs=None, skip_slug_regex=None)
+        doc_filter = DocFilter(
+            all=True, first=None, csv_slugs=None, skip_slug_regex=None
+        )
 
         got = doc_filter.filter(
             [
@@ -234,7 +260,22 @@ class TestDocFilter(TestCase):
 
     def test_filter_slugs(self):
         doc_filter = DocFilter(
-            all=False, first=None, slugs=["foo", "bazz"], skip_slug_regex=None
+            all=False, first=None, csv_slugs=["foo", "bazz"], skip_slug_regex=None
+        )
+
+        got = doc_filter.filter(
+            [
+                DevdocsMetadata(name="foo", slug="foo"),
+                DevdocsMetadata(name="bar", slug="bar"),
+                DevdocsMetadata(name="bazz", slug="bazz"),
+            ]
+        )
+
+        self.assertEqual(2, len(got))
+
+    def test_filter_slugs_csvs(self):
+        doc_filter = DocFilter(
+            all=False, first=None, csv_slugs=["foo,bazz"], skip_slug_regex=None
         )
 
         got = doc_filter.filter(
@@ -248,7 +289,9 @@ class TestDocFilter(TestCase):
         self.assertEqual(2, len(got))
 
     def test_filter_all_regex(self):
-        doc_filter = DocFilter(all=True, first=None, slugs=None, skip_slug_regex="^b")
+        doc_filter = DocFilter(
+            all=True, first=None, csv_slugs=None, skip_slug_regex="^b"
+        )
 
         got = doc_filter.filter(
             [
@@ -262,13 +305,13 @@ class TestDocFilter(TestCase):
 
     def test_filter_slugs_missing(self):
         doc_filter = DocFilter(
-            all=False, first=None, slugs=["does_not_exist"], skip_slug_regex=None
+            all=False, first=None, csv_slugs=["does_not_exist"], skip_slug_regex=None
         )
 
         self.assertRaises(MissingDocumentError, doc_filter.filter, [])
 
     def test_filter_first(self):
-        doc_filter = DocFilter(all=False, first=2, slugs=None, skip_slug_regex=None)
+        doc_filter = DocFilter(all=False, first=2, csv_slugs=None, skip_slug_regex=None)
 
         got = doc_filter.filter(
             [
@@ -303,7 +346,7 @@ class TestGenerator(TestCase):
         self.generator = Generator(
             devdocs_client=self.mock_client,
             doc_filter=DocFilter(
-                all=True, first=None, slugs=None, skip_slug_regex=None
+                all=True, first=None, csv_slugs=None, skip_slug_regex=None
             ),
             output_folder=output_folder,
             zim_config=zim_defaults(),

@@ -211,8 +211,8 @@ class DocFilter(BaseModel):
     all: bool | None
     # If > 0 and not None, allow the first N of each slug without version.
     first: int | None
-    # If specified, only the given slugs are allowed.
-    slugs: list[str] | None
+    # If specified, only the given slugs are allowed. Each entry may be comma delimited.
+    csv_slugs: list[str] | None
 
     # If specified, slugs matching the regex are skipped.
     skip_slug_regex: str | None
@@ -234,9 +234,10 @@ class DocFilter(BaseModel):
             help="Fetch the provided Devdocs resource. "
             "Slugs are the first path entry in the Devdocs URL. "
             "For example, the slug for: `https://devdocs.io/gcc~12/` is `gcc~12`. "
-            "Use --slug several times to fetch multiple docs.",
+            "Use --slug several times or with values separated by a comma to "
+            "fetch multiple docs.",
             action="append",
-            dest="slugs",
+            dest="csv_slugs",
             metavar="SLUG",
         )
         doc_selection.add_argument(
@@ -256,6 +257,18 @@ class DocFilter(BaseModel):
     def of(namespace: argparse.Namespace) -> "DocFilter":
         """Parses a namespace to create a new DocFilter."""
         return DocFilter.model_validate(namespace, from_attributes=True)
+
+    @property
+    def slugs(self) -> list[str] | None:
+        """Returns the parsed list of user supplied slugs, if specified."""
+        if self.csv_slugs is None:
+            return None
+
+        out: list[str] = []
+        for slug in self.csv_slugs:
+            out.extend(slug.split(","))
+
+        return out
 
     def filter(self, docs: list[DevdocsMetadata]) -> list[DevdocsMetadata]:
         """Filters docs based on the user's choices."""
