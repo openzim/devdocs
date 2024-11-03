@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Syntax highlighting matching DevDocs. (#30)
+
 ### Changed
 
 - Page navigation is now dynamically rendered reducing file sizes. (#24, #31)
