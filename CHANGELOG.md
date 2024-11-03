@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Syntax highlighting matching DevDocs. (#30)
+- Support for setting a custom icon for produced ZIM files. (#32)
 
 ### Changed
 
