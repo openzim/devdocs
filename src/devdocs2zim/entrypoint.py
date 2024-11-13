@@ -4,6 +4,7 @@ import os
 
 from devdocs2zim.client import DevdocsClient
 from devdocs2zim.constants import (
+    DEFAULT_LOGO_PATH,
     DEVDOCS_DOCUMENTS_URL,
     DEVDOCS_FRONTEND_URL,
     NAME,
@@ -24,6 +25,7 @@ def zim_defaults() -> ZimConfig:
         description_format="{full_name} docs by DevDocs",
         long_description_format=None,
         tags="devdocs;{slug_without_version}",
+        logo_format=str(DEFAULT_LOGO_PATH),
     )
 
 

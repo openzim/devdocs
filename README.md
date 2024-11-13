@@ -119,6 +119,8 @@ docker run -v my_dir:/output ghcr.io/openzim/devdocs devdocs2zim --first=2
     Value will be truncated to 4000 chars.Default: '{full_name} documentation by DevDocs'
 *  `--tag TAG`: Add tag to the ZIM. Use --tag several times to add multiple.
     Formatting is supported. Default: ['devdocs', '{slug_without_version}']
+*  `--logo-format FORMAT`: URL/path for the ZIM logo in PNG, JPG, or SVG format.
+    Formatting placeholders are supported. If unset, a DevDocs logo will be used.
 
 **Formatting Placeholders**
 

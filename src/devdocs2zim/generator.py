@@ -1,5 +1,6 @@
 import argparse
 import datetime
+import io
 import os
 import re
 from collections import defaultdict
@@ -13,6 +14,17 @@ from zimscraperlib.constants import (  # pyright: ignore[reportMissingTypeStubs]
     MAXIMUM_LONG_DESCRIPTION_METADATA_LENGTH,
     RECOMMENDED_MAX_TITLE_LENGTH,
 )
+from zimscraperlib.image.conversion import (  # pyright: ignore[reportMissingTypeStubs]
+    convert_image,
+    convert_svg2png,
+    format_for,
+)
+from zimscraperlib.image.transformation import (  # pyright: ignore[reportMissingTypeStubs]
+    resize_image,
+)
+from zimscraperlib.inputs import (  # pyright: ignore[reportMissingTypeStubs]
+    handle_user_provided_file,
+)
 from zimscraperlib.zim import (  # pyright: ignore[reportMissingTypeStubs]
     Creator,
     StaticItem,
@@ -21,7 +33,6 @@ from zimscraperlib.zim.indexing import (  # pyright: ignore[reportMissingTypeStu
     IndexData,
 )
 
-# pyright: ignore[reportMissingTypeStubs]
 from devdocs2zim.client import (
     DevdocsClient,
     DevdocsIndex,
@@ -71,6 +82,8 @@ class ZimConfig(BaseModel):
     long_description_format: str | None
     # Semicolon delimited list of tags to apply to the ZIM.
     tags: str
+    # Format to use for the logo.
+    logo_format: str
 
     @staticmethod
     def add_flags(parser: argparse.ArgumentParser, defaults: "ZimConfig"):
@@ -134,10 +147,19 @@ class ZimConfig(BaseModel):
         # argparse doesn't work so we expose the underlying semicolon delimited string.
         parser.add_argument(
             "--tags",
-            help="A semicolon (;) delimited list of tags to add to the ZIM."
+            help="A semicolon (;) delimited list of tags to add to the ZIM. "
             "Formatting is supported. "
             f"Default: {defaults.tags!r}",
             default=defaults.tags,
+        )
+
+        parser.add_argument(
+            "--logo-format",
+            help="URL/path for the ZIM logo in PNG, JPG, or SVG format. "
+            "Formatting placeholders are supported. "
+            "If unset, a DevDocs logo will be used.",
+            default=defaults.logo_format,
+            metavar="FORMAT",
         )
 
     @staticmethod
@@ -195,6 +217,7 @@ class ZimConfig(BaseModel):
                 else None
             ),
             tags=fmt(self.tags),
+            logo_format=fmt(self.logo_format),
         )
 
 
@@ -339,7 +362,6 @@ class Generator:
         self.page_template = self.env.get_template("page.html")  # type: ignore
         self.licenses_template = self.env.get_template(LICENSE_FILE)  # type: ignore
 
-        self.logo_path = self.asset_path("devdocs_48.png")
         self.copyright_path = self.asset_path("COPYRIGHT")
         self.license_path = self.asset_path("LICENSE")
 
@@ -456,6 +478,7 @@ class Generator:
 
         logger.info(f"  Writing to: {zim_path}")
 
+        logo_bytes = self.fetch_logo_bytes(formatted_config.logo_format)
         creator = Creator(zim_path, "index")
         creator.config_metadata(
             Name=formatted_config.name_format,
@@ -469,7 +492,7 @@ class Generator:
             Language=LANGUAGE_ISO_639_3,
             Tags=formatted_config.tags,
             Scraper=f"{NAME} v{VERSION}",
-            Illustration_48x48_at_1=self.logo_path.read_bytes(),
+            Illustration_48x48_at_1=logo_bytes,
         )
 
         # Start creator early to detect problems early.
@@ -490,6 +513,32 @@ class Generator:
                 common_resources=common_resources,
             )
         return zim_path
+
+    @staticmethod
+    def fetch_logo_bytes(user_logo_path: str) -> bytes:
+        """Fetch a user-supplied logo for the ZIM and format/resize it.
+
+        Parameters:
+          user_logo_path: Path or URL to the logo.
+        """
+        logger.info(f"  Fetching logo from: {user_logo_path}")
+        full_logo_path = handle_user_provided_file(source=user_logo_path)
+        if full_logo_path is None:
+            # This appears to only happen if the path is blank.
+            raise Exception(f"Fetching logo {user_logo_path!r} failed.")
+
+        converted_buf = io.BytesIO()
+        if format_for(full_logo_path, from_suffix=False) == "SVG":
+            # SVG conversion generates a PNG in the correct size
+            # so immediately return it.
+            convert_svg2png(full_logo_path, converted_buf, 48, 48)
+            return converted_buf.getvalue()
+        else:
+            # Convert to PNG
+            convert_image(full_logo_path, converted_buf, fmt="PNG")
+            # resize to 48x48
+            resize_image(converted_buf, 48, 48, allow_upscaling=True)
+            return converted_buf.getvalue()
 
     @staticmethod
     def page_titles(pages: list[DevdocsIndexEntry]) -> dict[str, str]:

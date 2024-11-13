@@ -1,8 +1,11 @@
 import argparse
+import io
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 from unittest.mock import create_autospec
+
+from PIL.Image import open as pilopen
 
 from devdocs2zim.client import (
     DevdocsClient,
@@ -32,6 +35,7 @@ class TestZimConfig(TestCase):
             description_format="default_description_format",
             long_description_format="default_long_description_format",
             tags="default_tag1;default_tag2",
+            logo_format="default_logo_format",
         )
 
     def test_flag_parsing_defaults(self):
@@ -66,6 +70,8 @@ class TestZimConfig(TestCase):
                     "long-description-format",
                     "--tags",
                     "tag1;tag2",
+                    "--logo-format",
+                    "logo-format",
                 ]
             )
         )
@@ -80,6 +86,7 @@ class TestZimConfig(TestCase):
                 description_format="description-format",
                 long_description_format="long-description-format",
                 tags="tag1;tag2",
+                logo_format="logo-format",
             ),
             got,
         )
@@ -101,6 +108,7 @@ class TestZimConfig(TestCase):
             description_format="{replace_me}",
             long_description_format="{replace_me}",
             tags="{replace_me}",
+            logo_format="{replace_me}",
         )
 
         got = to_format.format({"replace_me": "replaced"})
@@ -115,6 +123,7 @@ class TestZimConfig(TestCase):
                 description_format="replaced",
                 long_description_format="replaced",
                 tags="replaced",
+                logo_format="replaced",
             ),
             got,
         )
@@ -426,3 +435,39 @@ class TestGenerator(TestCase):
 
         # First fragment wins if no page points to the top
         self.assertEqual({"mock": "Mock Sub1"}, got)
+
+    def test_fetch_logo_bytes_jpeg(self):
+        jpg_path = str(Path(__file__).parent / "testdata" / "test.jpg")
+
+        got = Generator.fetch_logo_bytes(jpg_path)
+
+        self.assertIsNotNone(got)
+        with pilopen(io.BytesIO(got)) as image:
+            self.assertEqual((48, 48), image.size)
+            self.assertEqual("PNG", image.format)
+
+    def test_fetch_logo_bytes_png(self):
+        png_path = str(Path(__file__).parent / "testdata" / "test.png")
+
+        got = Generator.fetch_logo_bytes(png_path)
+
+        self.assertIsNotNone(got)
+        with pilopen(io.BytesIO(got)) as image:
+            self.assertEqual((48, 48), image.size)
+            self.assertEqual("PNG", image.format)
+
+    def test_fetch_logo_bytes_svg(self):
+        png_path = str(Path(__file__).parent / "testdata" / "test.svg")
+
+        got = Generator.fetch_logo_bytes(png_path)
+
+        self.assertIsNotNone(got)
+        with pilopen(io.BytesIO(got)) as image:
+            self.assertEqual((48, 48), image.size)
+            self.assertEqual("PNG", image.format)
+
+    def test_fetch_logo_bytes_does_not_exist_fails(self):
+        self.assertRaises(OSError, Generator.fetch_logo_bytes, "does_not_exist")
+
+    def test_fetch_logo_bytes_returns_none_fails(self):
+        self.assertRaises(Exception, Generator.fetch_logo_bytes, "")

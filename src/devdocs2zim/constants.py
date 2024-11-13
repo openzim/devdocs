@@ -10,6 +10,7 @@ from devdocs2zim.__about__ import __version__
 NAME = "devdocs2zim"
 VERSION = __version__
 ROOT_DIR = pathlib.Path(__file__).parent
+DEFAULT_LOGO_PATH = ROOT_DIR.joinpath("third_party", "devdocs", "devdocs_48.png")
 
 DEVDOCS_FRONTEND_URL = "https://devdocs.io"
 DEVDOCS_DOCUMENTS_URL = "https://documents.devdocs.io"
