@@ -29,7 +29,7 @@ jobs:
           echo "offliner_definition=$json" >> $GITHUB_OUTPUT
   call-workflow:
     needs: prepare-json
-    uses: openzim/overview/.github/workflows/update-zimfarm-offliner-definition.yaml
+    uses: openzim/overview/.github/workflows/update-zimfarm-offliner-definition.yaml@main
     with:
       version: ${{ github.event_name == 'release' && github.event.release.tag_name || 'dev' }}
       offliner: devdocs
