@@ -94,7 +94,7 @@
       "type": "boolean",
       "required": false,
       "title": "Debug",
-      "description": "Enable verbose output"
+      "description": "Enable verbose output."
     }
   }
 }
