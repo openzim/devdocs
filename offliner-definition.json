@@ -59,7 +59,8 @@
       "maxLength": 4000
     },
     "logo_format": {
-      "type": "string",
+      "type": "blob",
+      "kind": "image",
       "required": false,
       "title": "ZIM illustration",
       "description": "URL to a custom ZIM logo in PNG, JPG, or SVG format. You can use placeholders, see https://github.com/openzim/devdocs/blob/main/README.md."
