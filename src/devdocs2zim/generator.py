@@ -497,21 +497,27 @@ class Generator:
 
         # Start creator early to detect problems early.
         with creator as started_creator:
-            logger.info("  Fetching the index...")
-            index = self.devdocs_client.get_index(doc_metadata.slug)
-            logger.debug(f"  The index has {len(index.entries)} entries.")
+            try:
+                logger.info("  Fetching the index...")
+                index = self.devdocs_client.get_index(doc_metadata.slug)
+                logger.debug(f"  The index has {len(index.entries)} entries.")
 
-            logger.info("  Fetching the document database...")
-            db = self.devdocs_client.get_db(doc_metadata.slug)
-            logger.debug(f"  The database has {len(db)} entries.")
+                logger.info("  Fetching the document database...")
+                db = self.devdocs_client.get_db(doc_metadata.slug)
+                logger.debug(f"  The database has {len(db)} entries.")
 
-            self.add_zim_contents(
-                creator=started_creator,
-                doc_metadata=doc_metadata,
-                index=index,
-                db=db,
-                common_resources=common_resources,
-            )
+                self.add_zim_contents(
+                    creator=started_creator,
+                    doc_metadata=doc_metadata,
+                    index=index,
+                    db=db,
+                    common_resources=common_resources,
+                )
+            except Exception:
+                started_creator.can_finish = False
+
+                raise
+
         return zim_path
 
     @staticmethod

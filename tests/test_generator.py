@@ -471,3 +471,16 @@ class TestGenerator(TestCase):
 
     def test_fetch_logo_bytes_returns_none_fails(self):
         self.assertRaises(Exception, Generator.fetch_logo_bytes, "")
+
+    def test_generate_zim_cleans_up_on_failure(self):
+        doc_metadata = DevdocsMetadata(name="MockDoc", slug="mockdoc")
+
+        self.mock_client.get_db.side_effect = RuntimeError("Simulated network timeout")
+
+        with self.assertRaises(RuntimeError):
+            self.generator.generate_zim(doc_metadata, [])
+
+        output_dir = Path(self.generator.output_folder)
+        zims = list(output_dir.glob("*.zim"))
+
+        self.assertEqual(0, len(zims))

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Stop scraper from finishing ZIM when bad exception arises. (#55)
+
 ## [0.2.0] - 2024-11-14
 
 ### Added
