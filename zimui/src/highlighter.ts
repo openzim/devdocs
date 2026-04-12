@@ -28,7 +28,7 @@ import 'prismjs/components/prism-latex'
 import 'prismjs/components/prism-lua'
 import 'prismjs/components/prism-markdown'
 import 'prismjs/components/prism-markup-templating'
-import 'prismjs/components/prism-django'  // Must come after markup-templating
+import 'prismjs/components/prism-django' // Must come after markup-templating
 import 'prismjs/components/prism-matlab'
 import 'prismjs/components/prism-nginx'
 import 'prismjs/components/prism-nim'
@@ -52,17 +52,16 @@ import 'prismjs/components/prism-yaml'
 import 'prismjs/components/prism-zig'
 
 function highlightSyntax() {
-    for (const element of document.querySelectorAll("pre[data-language]")) {
+  for (const element of document.querySelectorAll('pre[data-language]')) {
+    // Devdocs adds the attribute data-language, but Prism uses classes
+    // to decide what to highlight.
+    const language = element.getAttribute('data-language')
+    element.classList.add(`language-${language}`)
 
-        // Devdocs adds the attribute data-language, but Prism uses classes
-        // to decide what to highlight.
-        const language = element.getAttribute("data-language")
-        element.classList.add(`language-${language}`)
-
-        // Highlight the element.
-        Prism.highlightElement(element)
-    }
+    // Highlight the element.
+    Prism.highlightElement(element)
+  }
 }
 
 // Do syntax highlighting on page load.
-document.addEventListener("DOMContentLoaded", highlightSyntax)
+document.addEventListener('DOMContentLoaded', highlightSyntax)
