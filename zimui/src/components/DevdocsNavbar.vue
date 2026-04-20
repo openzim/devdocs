@@ -12,7 +12,7 @@ import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 
 // JSONPath indicating the root page.
-const ROOT_PAGE_ID = ".landingHref"
+const ROOT_PAGE_ID = '.landingHref'
 
 // A page in the navbar.
 interface PageEntry {
@@ -67,7 +67,7 @@ const navigation = ref<Document>({
 
 // Currently selected page which may differ from the original if the user clicks a link
 // in the sidebar.
-const selectedPageId = ref("")
+const selectedPageId = ref('')
 
 // Map of section ID to open state if opened/closed by the user.
 const sectionOpenStates = ref(new Map<string, boolean>())
@@ -93,19 +93,19 @@ const displayNavigation = computed(() => {
       name: section.name,
       isOpen: false,
       children: [],
-      id: section.id,
+      id: section.id
     }
 
-    var hasSelectedChild = false;
+    var hasSelectedChild = false
     for (var page of section.children) {
       const pageEntry: PageEntry = {
         name: page.name,
         href: makeRelative(page.href),
         isSelected: page.id === selectedPageId.value,
-        id: page.id,
+        id: page.id
       }
 
-      hasSelectedChild = hasSelectedChild || pageEntry.isSelected;
+      hasSelectedChild = hasSelectedChild || pageEntry.isSelected
 
       sectionEntry.children.push(pageEntry)
     }
@@ -122,49 +122,51 @@ const displayNavigation = computed(() => {
 
 // Load the navigation data when the component is rendered.
 onMounted(() => {
-  axios.get(props.listingSrc, {
-        headers: {
-          Accept: 'application/json',
-        },
-      },
-  ).then(response => {
-    if (response.status != 200) {
-      error.value = `Loading navigation from ${props.listingSrc} failed status: ${response.status}`
-    } else {
-      var navbarData: Document = response.data
+  axios
+    .get(props.listingSrc, {
+      headers: {
+        Accept: 'application/json'
+      }
+    })
+    .then((response) => {
+      if (response.status != 200) {
+        error.value = `Loading navigation from ${props.listingSrc} failed status: ${response.status}`
+      } else {
+        var navbarData: Document = response.data
 
-      var hrefMapping = new Map();
-      hrefMapping.set(navbarData.landingHref, ROOT_PAGE_ID);
+        var hrefMapping = new Map()
+        hrefMapping.set(navbarData.landingHref, ROOT_PAGE_ID)
 
-      // Set up unique IDs for each navbar entry so they can be highlighted
-      // individually.
-      for (const [sectionNum, section] of navbarData.children.entries()) {
-        section.id = `.children[${sectionNum}]`
+        // Set up unique IDs for each navbar entry so they can be highlighted
+        // individually.
+        for (const [sectionNum, section] of navbarData.children.entries()) {
+          section.id = `.children[${sectionNum}]`
 
-        for (const [pageNum, page] of section.children.entries()) {
-          page.id = `${section.id}.children[${pageNum}]`
+          for (const [pageNum, page] of section.children.entries()) {
+            page.id = `${section.id}.children[${pageNum}]`
 
-          if (! hrefMapping.has(page.href)) {
-            hrefMapping.set(page.href, page.id)
+            if (!hrefMapping.has(page.href)) {
+              hrefMapping.set(page.href, page.id)
+            }
           }
         }
-      }
 
-      // Find the currently highlighted page.
-      const currentPageWithHash = props.current + window.location.hash
-      if (hrefMapping.has(currentPageWithHash)) {
-        // Highlight a link to the selected heading if one exists.
-        selectedPageId.value = hrefMapping.get(currentPageWithHash)
-      } else {
-        // Highlight the parent page if one exists, otherwise nothing.
-        selectedPageId.value = hrefMapping.get(props.current) ?? ""
-      }
+        // Find the currently highlighted page.
+        const currentPageWithHash = props.current + window.location.hash
+        if (hrefMapping.has(currentPageWithHash)) {
+          // Highlight a link to the selected heading if one exists.
+          selectedPageId.value = hrefMapping.get(currentPageWithHash)
+        } else {
+          // Highlight the parent page if one exists, otherwise nothing.
+          selectedPageId.value = hrefMapping.get(props.current) ?? ''
+        }
 
-      navigation.value = navbarData
-    }
-  }).catch(error => {
-    error.value = `Loading navigation from ${props.listingSrc} failed with error: ${error}`
-  })
+        navigation.value = navbarData
+      }
+    })
+    .catch((error) => {
+      error.value = `Loading navigation from ${props.listingSrc} failed with error: ${error}`
+    })
 })
 
 // Updates the current page to bet the selected one.
@@ -174,7 +176,7 @@ function setCurrentPage(pageId: string, path: string, event: Event) {
   // Handle the special case where multiple links point to the same document.
   // We want the user to be able to get the right highlighting when they click
   // but not refresh the page which would highlight the wrong item.
-  const currentPageRelative = makeRelative(props.current);
+  const currentPageRelative = makeRelative(props.current)
   if (path === currentPageRelative) {
     event.preventDefault()
   }
@@ -261,7 +263,9 @@ function toggleSection(sectionId: string, isOpen: boolean) {
   padding-left: 0 !important;
 }
 
-._list-item:before, ._docs-name:before, ._path-item:first-child:before {
+._list-item:before,
+._docs-name:before,
+._path-item:first-child:before {
   background-image: none;
 }
 </style>

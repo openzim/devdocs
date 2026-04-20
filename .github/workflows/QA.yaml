@@ -7,7 +7,7 @@ on:
       - main
 
 jobs:
-  check-qa:
+  check-scraper-qa:
     runs-on: ubuntu-24.04
 
     steps:
@@ -32,3 +32,28 @@ jobs:
 
       - name: Check pyright
         run: inv check-pyright
+
+  check-zimui-qa:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: yarn
+          cache-dependency-path: zimui/yarn.lock
+
+      - name: Install zimui dependencies
+        working-directory: zimui
+        run: yarn install --frozen-lockfile
+
+      - name: Check zimui formatting
+        working-directory: zimui
+        run: yarn format-check
+
+      - name: Check zimui lint
+        working-directory: zimui
+        run: yarn lint-check
