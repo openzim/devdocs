@@ -39,24 +39,24 @@
       "required": false,
       "title": "ZIM title",
       "description": "ZIM title. You can use placeholders, see https://github.com/openzim/devdocs/blob/main/README.md. Defaults to {full_name} Docs",
-      "minLength": 1,
-      "maxLength": 30
+      "minGraphemes": 1,
+      "maxGraphemes": 30
     },
     "description_format": {
       "type": "string",
       "required": false,
       "title": "ZIM description",
       "description": "ZIM description. You can use placeholders, see https://github.com/openzim/devdocs/blob/main/README.md. Defaults to {full_name} docs by DevDocs",
-      "minLength": 1,
-      "maxLength": 80
+      "minGraphemes": 1,
+      "maxGraphemes": 80
     },
     "long_description_format": {
       "type": "string",
       "required": false,
       "title": "ZIM long description",
       "description": "ZIM long description. You can use placeholders, see https://github.com/openzim/devdocs/blob/main/README.md. Defaults to no long description",
-      "minLength": 1,
-      "maxLength": 4000
+      "minGraphemes": 1,
+      "maxGraphemes": 4000
     },
     "logo_format": {
       "type": "blob",
