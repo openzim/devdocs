@@ -97,5 +97,35 @@
       "title": "Debug",
       "description": "Enable verbose output."
     }
-  }
+  },
+  "zimMetadata": [
+    {
+      "metadata": "Name",
+      "flag": "name_format"
+    },
+    {
+      "metadata": "Title",
+      "flag": "title_format"
+    },
+    {
+      "metadata": "Description",
+      "flag": "description_format"
+    },
+    {
+      "metadata": "LongDescription",
+      "flag": "long_description_format"
+    },
+    {
+      "metadata": "Creator",
+      "flag": "creator"
+    },
+    {
+      "metadata": "Publisher",
+      "flag": "publisher"
+    },
+    {
+      "metadata": "Illustration",
+      "flag": "logo_format"
+    }
+  ]
 }
