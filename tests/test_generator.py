@@ -234,7 +234,10 @@ class TestDocFilter(TestCase):
         parser = argparse.ArgumentParser(exit_on_error=False)
         DocFilter.add_flags(parser)
 
-        self.assertRaises(argparse.ArgumentError, parser.parse_args, args=[])
+        with self.assertRaises(SystemExit) as context:
+            parser.parse_args(args=[])
+
+        self.assertEqual(context.exception.code, 2)
 
     def test_flags_regex(self):
         parser = argparse.ArgumentParser()
