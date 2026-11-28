@@ -1,0 +1,57 @@
+name: Daily Tests
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+jobs:
+  run-integration-tests:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Retrieve source code
+        uses: actions/checkout@v6
+
+      - name: Build the Docker image
+        run: |
+          docker build -t local-devdocs .
+
+      - name: Run scraper
+        run: |
+          mkdir -p output
+          # The scraper does not retry failed HTTP requests, so retry the whole run
+          for attempt in 1 2 3; do
+            if docker run --rm -v "$PWD/output:/output" local-devdocs devdocs2zim \
+              --slug git \
+              --file-name-format "tests_en_devdocs_{clean_slug}" \
+              --name-format "tests_en_devdocs_{clean_slug}" \
+              --title-format "{full_name} Test" \
+              --description-format "Test ZIM for {full_name}"; then
+              exit 0
+            fi
+            echo "Scraper failed on attempt $attempt"
+            sleep 30
+          done
+          exit 1
+
+      - name: Archive ZIM
+        uses: actions/upload-artifact@v6
+        with:
+          name: tests_en_devdocs_git.zim
+          path: output/tests_en_devdocs_git.zim
+          retention-days: 30
+
+      - name: Run zimcheck
+        run: |
+          docker run --rm -v "$PWD/output:/output:ro" \
+            ghcr.io/openzim/zim-tools:3.8.0 zimcheck /output/tests_en_devdocs_git.zim
+
+      - name: Run integration test suite
+        run: |
+          docker run --rm \
+            -v "$PWD/tests-integration:/src/tests-integration:ro" \
+            -v "$PWD/output:/output:ro" \
+            -e ZIM_FILE_PATH=/output/tests_en_devdocs_git.zim \
+            local-devdocs \
+            bash -c "pip install --no-cache-dir pytest && pytest -v -p no:cacheprovider /src/tests-integration"
